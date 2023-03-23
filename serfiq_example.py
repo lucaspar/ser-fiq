@@ -1,3 +1,4 @@
+"""Example of how to use SER-FIQ model."""
 import cv2
 import loguru
 
