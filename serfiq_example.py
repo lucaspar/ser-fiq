@@ -1,33 +1,33 @@
-# Author: Jan Niklas Kolf, 2020
-from face_image_quality import SER_FIQ
 import cv2
+import loguru
+
+from face_image_quality import SER_FIQ
+
+log = loguru.logger
+
+
+def get_image_score(model: SER_FIQ, image: str) -> float:
+    """Runs SER-FIQ prediction on a single image."""
+    loaded_image = cv2.imread(image)
+    aligned_img = model.apply_mtcnn(loaded_image)
+
+    assert aligned_img is not None, "No face detected in image"
+
+    # T=100 (default) is a good choice
+    # alpha and r parameters can be used to scale the score distribution
+    score = model.get_score(aligned_img, T=100, alpha=130, r=0.88)
+    assert score is not None, "No face detected in image"
+
+    return score
+
+
+def main():
+    model = SER_FIQ(gpu=0)
+    test_imgs = ["./data/test_img.jpeg", "./data/test_img2.jpeg"]
+    for test_img in test_imgs:
+        score = get_image_score(model=model, image=test_img)
+        log.info("SER-FIQ quality for {}: {:.3f}", test_img, score)
+
 
 if __name__ == "__main__":
-    # Sample code of calculating the score of an image
-    
-    # Create the SER-FIQ Model
-    # Choose the GPU, default is 0.
-    ser_fiq = SER_FIQ(gpu=0)
-        
-    # Load the test image
-    test_img = cv2.imread("./data/test_img.jpeg")
-    
-    # Align the image
-    aligned_img = ser_fiq.apply_mtcnn(test_img)
-    
-    # Calculate the quality score of the image
-    # T=100 (default) is a good choice
-    # Alpha and r parameters can be used to scale your
-    # score distribution.
-    score = ser_fiq.get_score(aligned_img, T=100)
-    
-    print("SER-FIQ quality score of image 1 is", score)
-    
-    # Do the same thing for the second image as well
-    test_img2 = cv2.imread("./data/test_img2.jpeg")
-    
-    aligned_img2 = ser_fiq.apply_mtcnn(test_img2)
-    
-    score2 = ser_fiq.get_score(aligned_img2, T=100)
-   
-    print("SER-FIQ quality score of image 2 is", score2)
+    main()
