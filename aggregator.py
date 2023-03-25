@@ -48,9 +48,17 @@ def plot_scores(
     axis.set_xlabel("SER-FIQ score")  # type: ignore
     axis.set_ylabel("Count")  # type: ignore
     axis.grid(True)  # type: ignore
-    fig.tight_layout()
+
+    axis = next(axes)
+    assert axis is not None, "No axis found"
+    axis = df_scores["serfiq_score"].hist(ax=axis, bins=100, histtype="step", log=True)  # type: ignore
+    axis.set_title("SER-FIQ score distribution (log scale)")  # type: ignore
+    axis.set_xlabel("SER-FIQ score")  # type: ignore
+    axis.set_ylabel("Count")  # type: ignore
+    axis.grid(True)  # type: ignore
 
     # save plot
+    fig.tight_layout()
     fig_name = os.path.join(dir_plots, "all_scores.png")
     os.makedirs(os.path.dirname(fig_name), exist_ok=True)
     fig.savefig(fig_name)
@@ -167,7 +175,7 @@ def face_sampler(
 def main():
     """Main function to aggregate all scores into a single CSV file."""
     # parameters
-    num_samples = 25
+    num_samples = 36
     dir_scores = "data/scores"
     dir_videos = "data/videos"
     dir_plots = "plots"
