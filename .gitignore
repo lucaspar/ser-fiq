@@ -1,9 +1,11 @@
 # project-specific
-insightface/model/*
-!insightface/model/download_link_license.txt
+*sample*.png
 data/meta
 data/scores
 data/videos
+insightface/model/*
+plots/
+!insightface/model/download_link_license.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
