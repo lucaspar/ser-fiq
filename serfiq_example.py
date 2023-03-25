@@ -54,7 +54,7 @@ def prepare_tracklets(
 
 def get_scores_from_video(
     model: SER_FIQ, video_path: str, df_rois: pl.DataFrame, break_early: bool = False
-) -> pl.DataFrame:
+) -> Optional[pl.DataFrame]:
     """Runs SER-FIQ prediction on a video."""
     scores = dict()
     log.info(f"Processing video: {video_path} using {df_rois.height} ROIs")
@@ -142,6 +142,9 @@ def get_scores_from_video(
     finally:
         cap.release()
 
+    if len(scores) == 0:
+        log.warning(f"No scores for video {video_path}")
+        return None
     df_scores = pl.from_dicts(list(scores.values()))
     return df_scores
 
@@ -206,6 +209,8 @@ def main():
             df_rois=df_tracklet,
             break_early=is_demo,
         )
+        if df_scores is None:
+            continue
         if is_demo:
             log.info(df_scores.head())
         df_scores.write_csv(csv_name)
