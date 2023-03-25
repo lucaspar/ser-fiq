@@ -38,8 +38,9 @@ def plot_scores(
     """Plots scores distribution."""
     if isinstance(df_scores, pl.DataFrame):
         df_scores = df_scores.to_pandas()
-    fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
     axes = iter(axes.flatten()) if hasattr(axes, "flatten") else iter([axes])  # type: ignore
+    min_quality_threshold: float = 0.1
 
     axis = next(axes)
     assert axis is not None, "No axis found"
@@ -47,6 +48,9 @@ def plot_scores(
     axis.set_title("SER-FIQ score distribution")  # type: ignore
     axis.set_xlabel("SER-FIQ score")  # type: ignore
     axis.set_ylabel("Count")  # type: ignore
+    axis.axvline(min_quality_threshold, color="red", linestyle="--")  # type: ignore
+    legend = ["SER-FIQ score", f"Quality threshold ({min_quality_threshold})"]
+    axis.legend(legend)  # type: ignore
     axis.grid(True)  # type: ignore
 
     axis = next(axes)
@@ -55,13 +59,61 @@ def plot_scores(
     axis.set_title("SER-FIQ score distribution (log scale)")  # type: ignore
     axis.set_xlabel("SER-FIQ score")  # type: ignore
     axis.set_ylabel("Count")  # type: ignore
+    axis.axvline(min_quality_threshold, color="red", linestyle="--")  # type: ignore
+    axis.legend(legend)  # type: ignore
+    axis.grid(True)  # type: ignore
+
+    # group by tracklet_id and get the mean and std
+    # log.info(df_scores.columns)
+    # df_scores = df_scores[df_scores["serfiq_score"] > min_quality_threshold]
+    df_tracklets_agg = df_scores.groupby("tracklet_id").agg(
+        tracklet_mean=pd.NamedAgg(column="serfiq_score", aggfunc=lambda x: x.mean()),
+        tracklet_std=pd.NamedAgg(column="serfiq_score", aggfunc=lambda x: x.std()),
+    )
+    df_tracklets_agg = df_tracklets_agg[
+        df_tracklets_agg["tracklet_mean"] > min_quality_threshold
+    ]
+    # scatter plot of mean and std
+    axis = next(axes)
+    assert axis is not None, "No axis found"
+    axis.scatter(  # type: ignore
+        df_tracklets_agg["tracklet_mean"],
+        df_tracklets_agg["tracklet_std"],
+        s=1,
+    )
+    title = f"SER-FIQ scores agg. by tracklet | Mean (>{min_quality_threshold}) vs. Std"
+    xlabel = "SER-FIQ mean for tracklet"
+    ylabel = "SER-FIQ standard deviation for tracklet"
+    axis.set_title(title)  # type: ignore
+    axis.set_xlabel(xlabel)  # type: ignore
+    axis.set_ylabel(ylabel)  # type: ignore
+    axis.grid(True)  # type: ignore
+
+    # same plot with 2D hexbin
+    axis = next(axes)
+    assert axis is not None, "No axis found"
+    hex_bin = axis.hexbin(  # type: ignore
+        df_tracklets_agg["tracklet_mean"],
+        df_tracklets_agg["tracklet_std"],
+        gridsize=10,
+        mincnt=1,
+        cmap="viridis",
+    )
+    cb = fig.colorbar(hex_bin, ax=axis)
+    cb.set_label("Count")
+    axis.set_title(title)  # type: ignore
+    axis.set_xlabel(xlabel)  # type: ignore
+    axis.set_ylabel(ylabel)  # type: ignore
+    # show colorbar
+    # fig.colorbar(plt.cm.ScalarMappable(), ax=axis)  # type: ignore
     axis.grid(True)  # type: ignore
 
     # save plot
     fig.tight_layout()
-    fig_name = os.path.join(dir_plots, "all_scores.png")
-    os.makedirs(os.path.dirname(fig_name), exist_ok=True)
-    fig.savefig(fig_name)
+    for ext in ["png", "svg"]:
+        fig_name = os.path.join(dir_plots, f"all_scores.{ext}")
+        os.makedirs(os.path.dirname(fig_name), exist_ok=True)
+        fig.savefig(fig_name)
     if display:
         plt.show()
 
@@ -188,13 +240,13 @@ def main():
 
     # plots and previews
     plot_scores(df_scores=df_scores, dir_plots=dir_plots, display=True)
-    face_sampler(
-        df_scores=df_scores,
-        dir_videos=dir_videos,
-        dir_plots=dir_plots,
-        num_samples=num_samples,
-        display=True,
-    )
+    # face_sampler(
+    #     df_scores=df_scores,
+    #     dir_videos=dir_videos,
+    #     dir_plots=dir_plots,
+    #     num_samples=num_samples,
+    #     display=True,
+    # )
 
 
 if __name__ == "__main__":
