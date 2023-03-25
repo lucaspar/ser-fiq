@@ -1,6 +1,7 @@
 # project-specific
 insightface/model/*
 !insightface/model/download_link_license.txt
+data/meta
 data/scores
 data/videos
 
