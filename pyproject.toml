@@ -16,8 +16,6 @@
         kiwisolver    = "^1.4.4"
         loguru        = "^0.6.0"
         matplotlib    = "^3.7.1"
-        mxnet-cu116   = "^1.9.1"
-        mxnet-cu117   = "^1.9.1"
         networkx      = "^3.0"
         numpy         = "~1.21.0"
         opencv-python = "^4.7.0.72"
@@ -33,6 +31,10 @@
         threadpoolctl = "^3.1.0"
         tifffile      = "^2023.3.21"
         urllib3       = "^1.26.15"
+    polars = "^0.16.14"
+    mxnet-cu117 = "^1.9.1"
+    pandas = "^1.5.3"
+    pyarrow = "^11.0.0"
 
 
 [build-system]
