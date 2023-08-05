@@ -72,7 +72,6 @@ def get_scores_from_video(
         # fetching first ROI and frame
         frame_number = -1
         for roi in prog_rois:
-
             # fetching next ROI
             original_frame = None
 

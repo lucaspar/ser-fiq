@@ -5,10 +5,12 @@ from typing import Any, Dict, List, Union
 
 import cv2
 import loguru
+import numpy as np
 import pandas as pd
 import polars as pl
 from matplotlib import pyplot as plt
 from polars import exceptions
+from scipy.stats import norm
 
 log = loguru.logger
 
@@ -95,7 +97,7 @@ def plot_scores(
     hex_bin = axis.hexbin(  # type: ignore
         df_tracklets_agg["tracklet_mean"],
         df_tracklets_agg["tracklet_std"],
-        gridsize=10,
+        gridsize=7,
         mincnt=1,
         cmap="viridis",
     )
@@ -224,22 +226,81 @@ def face_sampler(
     )
 
 
+def compute_serfiq_difficulty_scores(df_scores: pl.DataFrame) -> pl.DataFrame:
+    """Computes SER-FIQ difficulty scores."""
+
+    # get mean and stdev of scores
+    mean = df_scores["serfiq_score"].mean()
+    std = df_scores["serfiq_score"].std()
+
+    def fn_difficulty(ser_fiq_score: float) -> float:
+        """Passes the raw score through a cumulative distribution function.
+
+        In order to standardize it and make it a difficulty score.
+        """
+        return 1 - norm.cdf(ser_fiq_score, loc=mean, scale=std)
+
+    df_diff = df_scores.with_columns(
+        [
+            pl.col(
+                "serfiq_score",
+            )
+            .apply(fn_difficulty)
+            .alias("difficulty"),
+        ]
+    )
+    return df_diff
+
+
+def plot_difficulties_and_scores(
+    df_scores: pl.DataFrame,
+    display: bool = True,
+    dir_plots: str = "plots",
+) -> None:
+    """Plots the SER-FIQ scores and difficulty scores."""
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].hist(df_scores["serfiq_score"], bins=100, histtype="step")
+    axes[0].set_title("SER-FIQ scores")
+    axes[1].hist(df_scores["difficulty"], bins=100, histtype="step")
+    axes[1].set_title("Difficulty scores")
+    fig.tight_layout()
+    fig_name = os.path.join(dir_plots, "difficulties_and_scores.png")
+    os.makedirs(os.path.dirname(fig_name), exist_ok=True)
+    fig.savefig(fig_name)
+    if display:
+        plt.show()
+
+
 def main():
     """Main function to aggregate all scores into a single CSV file."""
     # parameters
-    num_samples = 36
     dir_scores = "data/scores"
-    dir_videos = "data/videos"
     dir_plots = "plots"
 
     # load scores and aggregate them
-    df_scores = load_all_scores(dir_scores)
-    log.info(f"Loaded {len(df_scores):,} scores")
-    log.info(df_scores.head(5))
-    df_scores.write_csv(f"data/scores/agg_scores_{len(df_scores):,}.csv")
+    df_scores = None
+    aggregate_files = False
+    if aggregate_files:
+        df_scores = load_all_scores(dir_scores)
+        log.info(f"Loaded {len(df_scores):,} scores")
+        log.info(df_scores.head(5))
+        df_scores.write_csv(f"data/scores/agg_scores_{len(df_scores):,}.csv")
+    else:
+        log.warning("Not aggregating scores")
+
+    # compute ser-fiq difficulty scores
+    if df_scores is None:
+        agg_file_matcher = os.path.join(dir_scores, "agg_*.csv")
+        agg_file = glob.glob(agg_file_matcher)
+        num_rows = 100_000
+        df_scores = pl.read_csv(agg_file[0], n_rows=num_rows)
+        log.info(f"Loaded {len(df_scores):,} scores")
+
+    df_scores = compute_serfiq_difficulty_scores(df_scores=df_scores)
+    plot_difficulties_and_scores(df_scores=df_scores, dir_plots=dir_plots, display=True)
 
     # plots and previews
-    plot_scores(df_scores=df_scores, dir_plots=dir_plots, display=True)
+    # plot_scores(df_scores=df_scores, dir_plots=dir_plots, display=True)
     # face_sampler(
     #     df_scores=df_scores,
     #     dir_videos=dir_videos,
